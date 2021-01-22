@@ -1,0 +1,4 @@
+
+include ':annotations'
+include ':app'
+rootProject.name = "TrPlugin"
