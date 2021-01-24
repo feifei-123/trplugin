@@ -1,5 +1,9 @@
 package com.sogou.iot.trplugin;
 
+import android.util.Log;
+
+import java.util.ArrayList;
+
 /**
  * 文件名:ComponentContrainer
  * 创建者:baixuefei
@@ -9,8 +13,22 @@ package com.sogou.iot.trplugin;
 
 
 //插件管理器
-class ComponentManager {
+public class ComponentManager {
+
     public synchronized void initComponet() {
+    }
+
+    public void toDeleteMethod() {
 
     }
+
+    public void calculate(){
+        Long start = System.currentTimeMillis();
+        int i = 10;
+        int j = 100+i;
+        Long end = System.currentTimeMillis();
+        System.out.println("calucate cost:"+(end-start));
+
+    }
+    public String toDeleteFiled;
 }

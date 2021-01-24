@@ -41,5 +41,6 @@ object PluginHolder {
         return (project?.extensions?.getByName(componentExt) as ComponentExtension).matchInjectManagerInjectMethod
     }
 
+    var classsNameCollection = mutableSetOf<String>()
 }
 

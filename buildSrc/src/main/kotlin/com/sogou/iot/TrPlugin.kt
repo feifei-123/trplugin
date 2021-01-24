@@ -32,9 +32,9 @@ class TrPlugin : Plugin<Project> {
             project.extensions.create(PluginHolder.componentExt, ComponentExtension::class.java)
 
             project.extensions.getByType(AppExtension::class.java)?.apply {
-                registerTransform(CostTransform())
-//                registerTransform(ScanTransform()) //扫描,收集类信息
-//                registerTransform(InjectTransform())//处理手机到的类信息
+//                registerTransform(CostTransform())
+                registerTransform(ScanTransform()) //扫描,收集类信息
+                registerTransform(InjectTransform())//处理手机到的类信息
             }
 
         }

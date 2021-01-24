@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import com.sogou.iot.annotations.Cost
 import com.sogou.iot.annotations.TimeCostCache
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
     @Cost
@@ -16,4 +17,16 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
     }
+}
+
+fun main(args:Array<String>){
+
+    System.out.println("feifei---test asm ---- ")
+//    var inputFile = File("/Users/feifei/Desktop/TM/Demo/TrPlugin/app/build/intermediates/transforms/Scan/debug/33/com/sosou/iot/trplugin/ComponentManager.class")
+//    var outputFile = File("/Users/feifei/Desktop/TM/Demo/TrPlugin/app/build/intermediates/transforms/inject/debug/33/com/sosou/iot/trplugin/ComponentManager.class")
+//    TestAsm().scanClass(inputFile,outputFile)
+
+    Thread.sleep(10000)
+    System.out.println("feifei---test asm ----2222 ")
+
 }

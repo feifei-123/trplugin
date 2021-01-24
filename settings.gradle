@@ -1,4 +1,4 @@
-
+include ':asm_demo'
 include ':annotations'
 include ':app'
 rootProject.name = "TrPlugin"
