@@ -17,11 +17,17 @@ class AsmPractice {
     fun scanClassRemoveMethod(file: File, out: File) {
         var inputStream = FileInputStream(file)
         var outputStream = FileOutputStream(out)
+
+        //构造ClassReader对象
         var cr = ClassReader(inputStream)
+        //构造ClassWriter对象
         var cw = ClassWriter(cr, ClassWriter.COMPUTE_MAXS)
+        //构造ClassAdapter对象,指定其传递链的下一级为ClassWriter
         var classAdapter =
             RemoveMethodClassVisitor(Opcodes.ASM7, cw)
+        //ClassReader读取类的信息,指定读取到的类信息传递到ClassAdapter
         cr.accept(classAdapter, ClassReader.EXPAND_FRAMES)
+        //最终的类转换成ByteArray
         var newClassBytes = cw.toByteArray()
         outputStream.write(newClassBytes)
         inputStream.close()
@@ -115,7 +121,7 @@ class AsmPractice {
         cw.visit(
             V1_7,
             ACC_PUBLIC + ACC_SUPER,
-            "com/sogou/iot/testasm/Comparable",
+            "com/sogou/iot/asm_demo/Comparable",
             null,
             "java/lang/Object",
             null
@@ -143,11 +149,11 @@ class AsmPractice {
             mv.visitLineNumber(12, l1)
             mv.visitVarInsn(ALOAD, 0)
             mv.visitInsn(ICONST_M1)
-            mv.visitFieldInsn(PUTFIELD, "com/sogou/iot/testasm/Comparable", "LESS", "I")
+            mv.visitFieldInsn(PUTFIELD, "com/sogou/iot/asm_demo/Comparable", "LESS", "I")
             mv.visitInsn(RETURN)
             val l2 = Label()
             mv.visitLabel(l2)
-            mv.visitLocalVariable("this", "Lcom/sogou/iot/testasm/Comparable;", null, l0, l2, 0)
+            mv.visitLocalVariable("this", "Lcom/sogou/iot/asm_demo/Comparable;", null, l0, l2, 0)
             mv.visitMaxs(2, 1)
             mv.visitEnd()
         }
@@ -164,7 +170,7 @@ class AsmPractice {
             mv.visitInsn(IRETURN)
             val l1 = Label()
             mv.visitLabel(l1)
-            mv.visitLocalVariable("this", "Lcom/sogou/iot/testasm/Comparable;", null, l0, l1, 0)
+            mv.visitLocalVariable("this", "Lcom/sogou/iot/asm_demo/Comparable;", null, l0, l1, 0)
             mv.visitLocalVariable("o", "Ljava/lang/Object;", null, l0, l1, 1)
             mv.visitMaxs(1, 2)
             mv.visitEnd()
