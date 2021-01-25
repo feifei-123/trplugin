@@ -1,20 +1,12 @@
 package com.sogou.iot.transform.inject
 
+import com.android.build.api.transform.TransformInvocation
 import com.sogou.iot.PluginHolder
-import com.sogou.iot.TrLogger
-import com.sogou.iot.TrPlugin
-import com.sogou.iot.Utils
 import com.sogou.iot.transform.BaseTransform
-import com.sogou.iot.transform.cost.CostClassVisitor
 
 
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassVisitor
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
 import java.io.File
 import java.io.InputStream
-import javax.xml.crypto.dsig.Transform
 
 /**
  * 文件名:ScanTransform
@@ -30,45 +22,28 @@ class ScanTransform : BaseTransform() {
         return "Scan"
     }
 
-    override fun doScanClass(inputStream: InputStream): ByteArray {
-        //classReader
-        var cr = ClassReader(inputStream)
-        //classWriter
-        var cw = ClassWriter(cr, ClassWriter.COMPUTE_MAXS)
-        //classAdapter
-        var classAdapter =
-            ScannClassVisitor(Opcodes.ASM7, cw)
-        //classReader.accept()
-        cr.accept(classAdapter, ClassReader.EXPAND_FRAMES)
-        return cw.toByteArray()
+    override fun doScanClass(
+        sourceFile: File,
+        destFile: File,
+        inputStream: InputStream
+    ): ByteArray {
+        return ScanHelper.doScanClass(sourceFile, destFile, inputStream)
     }
 
-}
+    override fun beforeTransform(transformInvocation: TransformInvocation?) {
+        super.beforeTransform(transformInvocation)
+    }
 
-class ScannClassVisitor(api: Int, classVisitor: ClassVisitor?) : ClassVisitor(api, classVisitor) {
-
-    override fun visit(
-        version: Int,
-        access: Int,
-        name: String,
-        signature: String?,
-        superName: String?,
-        interfaces: Array<out String>
-    ) {
-
-        var mathedInterface = interfaces.filter {
-            PluginHolder.getScanInterfaceType().equals(Utils.replaySeparator2Dot(it))
-        }.size > 0
-
-        if (mathedInterface) {
-            PluginHolder.classsNameCollection.add(name)
+    override fun afeterTransform(transformInvocation: TransformInvocation?) {
+        super.afeterTransform(transformInvocation)
+        if (PluginHolder.injectMangetTargetFile != null && PluginHolder.injectMangetTargetFile?.exists()==true) {
+            //找到了 被插入的类,此处插入操作
+            if (PluginHolder.injectMangetTargetFile?.absolutePath?.endsWith(".jar") == true) {
+                InjectHelper.inject2Jar(PluginHolder.injectMangetTargetFile!!)
+            } else {
+                InjectHelper.inject2ClassFile(PluginHolder.injectMangetTargetFile!!)
+            }
         }
-
-        TrLogger.d(
-            "ScannClassVisitor === visit :${name},signature:$signature,superName:${superName},interfaces:${Utils.flattenStringArray(
-                interfaces as Array<String>
-            )},matched:${mathedInterface}"
-        )
-        super.visit(version, access, name, signature, superName, interfaces)
     }
 }
+

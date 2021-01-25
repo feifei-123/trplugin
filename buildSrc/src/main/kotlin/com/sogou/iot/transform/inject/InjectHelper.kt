@@ -1,27 +1,31 @@
 package com.sogou.iot.transform.inject
 
 import com.sogou.iot.*
-import com.sogou.iot.transform.BaseTransform
+import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
 import org.objectweb.asm.*
-import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.AdviceAdapter
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
 
 /**
- * 文件名:InjectTransform
+ * 文件名:InsertHelper
  * 创建者:baixuefei
- * 创建日期:2021/1/21 9:53 PM
+ * 创建日期:2021/1/25 5:16 PM
  * 职责描述:
  */
 
 
-class InjectTransform : BaseTransform() {
+object InjectHelper {
 
-    override fun getName(): String {
-        return "inject"
-    }
+    fun doGenerateCode2Manager(inputStream: InputStream): ByteArray {
 
-    override fun doScanClass(inputStream: InputStream): ByteArray {
         var cr = ClassReader(inputStream)
         var cw = ClassWriter(cr, ClassWriter.COMPUTE_MAXS)
         var classAdapter =
@@ -30,6 +34,93 @@ class InjectTransform : BaseTransform() {
         return cw.toByteArray()
     }
 
+    fun isInjectManagerClass(entryName: String): Boolean {
+        var shouldInject = false
+        if (entryName.isEmpty() || !entryName.endsWith(".class")) {
+            shouldInject =  false
+        }
+
+        if (entryName.contains(PluginHolder.getInjectManagetTypeWithoutPackage())) {
+            shouldInject =  true
+        }
+
+        TrLogger.d("isInjectManagerClass:${shouldInject},entryName:${entryName},InjectManagerType:${PluginHolder.getInjectManagetTypeWithoutPackage()}")
+
+        return shouldInject
+    }
+
+
+    fun inject2Jar(inputJar: File) {
+        var srcJar = JarFile(inputJar)
+
+        //临时输出文件
+        var outputJar = File(inputJar.getParent(), inputJar.name + ".opt")
+        if (outputJar.exists()) outputJar.delete()
+        //输出流
+        var outputJarStream = JarOutputStream(FileOutputStream(outputJar))
+
+        srcJar.entries()?.apply {
+            while (hasMoreElements()) {
+
+                //输入文件
+                var inputJarEntry = nextElement()
+
+                var inputJarStream = srcJar.getInputStream(inputJarEntry)
+
+                //取出每一个class类，注意这里的包名是"/"分割 ，不是"."
+                var entryName = inputJarEntry.name
+                TrLogger.d("inject2Jar entryName ===>:${entryName}")
+                //输出文件
+                var outputZipEntry = ZipEntry(entryName)
+                outputJarStream.putNextEntry(outputZipEntry)
+
+                //目录不需要处理
+                if (isInjectManagerClass(inputJarEntry.name)) { //需要扫描
+                    val newClassBytes = doGenerateCode2Manager(inputJarStream)
+                    outputJarStream.write(newClassBytes)
+                } else {
+                    outputJarStream.write(IOUtils.toByteArray(inputJarStream))
+                }
+
+                outputJarStream.closeEntry()
+
+            }
+        }
+
+        outputJarStream.close()
+        srcJar.close()
+
+        if (inputJar.exists()) {
+            inputJar.delete()
+        }
+        outputJar.renameTo(inputJar)
+
+        PluginHolder.injectManagetSourceFile?.let {
+         if(it.exists()) it.delete()
+            FileUtils.copyFile(inputJar,it)
+        }
+    }
+
+    fun inject2ClassFile(classfile: File) {
+        if (isInjectManagerClass(classfile.name)) {
+            var optClass = File(classfile.getParent(), classfile.name + ".opt")
+            val inputStream = FileInputStream(classfile)
+            val outputStream = FileOutputStream(optClass);
+            var bytes = doGenerateCode2Manager(inputStream)
+            outputStream.write(bytes)
+            inputStream.close()
+            outputStream.close()
+            if (classfile.exists()) {
+                classfile.delete()
+            }
+            optClass.renameTo(classfile)
+
+            PluginHolder.injectManagetSourceFile?.let {
+                if(it.exists()) it.delete()
+                FileUtils.copyFile(classfile,it)
+            }
+        }
+    }
 }
 
 class InjectClassVisitor(api: Int, classVisitor: ClassVisitor?) : ClassVisitor(api, classVisitor) {
@@ -65,10 +156,7 @@ class InjectClassVisitor(api: Int, classVisitor: ClassVisitor?) : ClassVisitor(a
             if (name.equals("<init>")) {
                 generateField(mv)
             }
-//            else {
-//                return null
-//            }
-            return InjectMethodVisitor(ASM7, mv, access, name, descriptor)
+            return InjectMethodVisitor(Opcodes.ASM7, mv, access, name, descriptor)
         } else {
             return mv
         }
@@ -87,7 +175,7 @@ class InjectClassVisitor(api: Int, classVisitor: ClassVisitor?) : ClassVisitor(a
         val fieldSignature = PluginHolder.getScanInterfaceType()?.toSignature()
         fieldSignature?.let {
             var fieldVisitor = cv.visitField(
-                ACC_PUBLIC,
+                Opcodes.ACC_PUBLIC,
                 "comoments",
                 "Ljava/util/ArrayList;",
                 "Ljava/util/ArrayList<${it}>;",
@@ -95,29 +183,11 @@ class InjectClassVisitor(api: Int, classVisitor: ClassVisitor?) : ClassVisitor(a
             );
             fieldVisitor.visitEnd();
         }
-
-        //初始化属性
-        methodVisitor?.visitVarInsn(ALOAD, 0);
-        methodVisitor?.visitTypeInsn(NEW, "java/util/ArrayList");
-        methodVisitor?.visitInsn(DUP);
-        methodVisitor?.visitMethodInsn(
-            INVOKESPECIAL,
-            "java/util/ArrayList",
-            "<init>",
-            "()V",
-            false
-        );
-        methodVisitor?.visitFieldInsn(
-            PUTFIELD,
-            "com/sogou/iot/trplugin/ComponentManager",
-            "comoments",
-            "Ljava/util/ArrayList;"
-        );
     }
 
     fun generateMethod() {
         var methodVisitor = cv.visitMethod(
-            ACC_PUBLIC or ACC_SYNCHRONIZED,
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_SYNCHRONIZED,
             "initComponet11",
             "()V",
             null,
@@ -126,7 +196,7 @@ class InjectClassVisitor(api: Int, classVisitor: ClassVisitor?) : ClassVisitor(a
 
         methodVisitor.visitCode()
         //...此处增加方法的具体实现
-        methodVisitor.visitInsn(RETURN)
+        methodVisitor.visitInsn(Opcodes.RETURN)
         methodVisitor.visitMaxs(0, 1)
         methodVisitor.visitEnd()
     }
@@ -224,6 +294,6 @@ class InjectMethodVisitor(
             "com/sogou/iot/trplugin/ComponentManager",
             "comoments",
             "Ljava/util/ArrayList;"
-        );
+        )
     }
 }

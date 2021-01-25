@@ -5,6 +5,7 @@ import com.sogou.iot.Utils
 import com.sogou.iot.transform.BaseTransform
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.AdviceAdapter
+import java.io.File
 import java.io.InputStream
 
 
@@ -21,14 +22,13 @@ class CostTransform : BaseTransform() {
         return "Cost"
     }
 
-     override fun doScanClass(inputStream: InputStream): ByteArray {
+     override fun doScanClass(sourceFile:File,destFile: File, inputStream: InputStream): ByteArray {
         //classReader
         var cr = ClassReader(inputStream)
         //classWriter
         var cw = ClassWriter(cr, 0)
         //classAdapter
-        var classAdapter =
-            CostClassVisitor(Opcodes.ASM7, cw)
+        var classAdapter = CostClassVisitor(Opcodes.ASM7, cw)
         //classReader.accept()
         cr.accept(classAdapter, ClassReader.EXPAND_FRAMES)
         return cw.toByteArray()

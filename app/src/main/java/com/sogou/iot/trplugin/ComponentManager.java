@@ -18,17 +18,4 @@ public class ComponentManager {
     public synchronized void initComponet() {
     }
 
-    public void toDeleteMethod() {
-
-    }
-
-    public void calculate(){
-        Long start = System.currentTimeMillis();
-        int i = 10;
-        int j = 100+i;
-        Long end = System.currentTimeMillis();
-        System.out.println("calucate cost:"+(end-start));
-
-    }
-    public String toDeleteFiled;
 }

@@ -42,10 +42,11 @@ abstract class BaseTransform : Transform() {
 
     override fun transform(transformInvocation: TransformInvocation?) {
 
+        beforeTransform(transformInvocation)
         //是否是增量编译
         val isCurrentIncremental = transformInvocation?.isIncremental
 
-        if(isCurrentIncremental == false){ //如果是非增量编译,则清空就的输出内容
+        if (isCurrentIncremental == false) { //如果是非增量编译,则清空就的输出内容
             transformInvocation?.outputProvider?.deleteAll()
         }
 
@@ -67,18 +68,18 @@ abstract class BaseTransform : Transform() {
 
                 TrLogger.e("jarInput isCurrentIncremental:${isCurrentIncremental},status:${status},input:${jarInput.file.absolutePath},dest:${destFile.absolutePath}")
 
-                if(isCurrentIncremental == true){ //增量编译
-                    if(status == Status.NOTCHANGED){ //NOTCHANGED 不做任何处理
+                if (isCurrentIncremental == true) { //增量编译
+                    if (status == Status.NOTCHANGED) { //NOTCHANGED 不做任何处理
                         //do nothing
-                    }else if(status == Status.ADDED || status == Status.CHANGED){ //ADDED或CHANGED做常规的处理
-                        transformJar(jarInput.file,destFile)
-                    }else if(status == Status.REMOVED){ //REMOVED 被移除,确保destFile被删除
-                        if(destFile.exists()){
+                    } else if (status == Status.ADDED || status == Status.CHANGED) { //ADDED或CHANGED做常规的处理
+                        transformJar(jarInput.file, destFile)
+                    } else if (status == Status.REMOVED) { //REMOVED 被移除,确保destFile被删除
+                        if (destFile.exists()) {
                             FileUtils.deleteRecursivelyIfExists(destFile)
                         }
                     }
-                }else{ //非编译则执行,常规的全量处理
-                    transformJar(jarInput.file,destFile)
+                } else { //非编译则执行,常规的全量处理
+                    transformJar(jarInput.file, destFile)
                 }
 
             }
@@ -97,7 +98,7 @@ abstract class BaseTransform : Transform() {
                 //完成从source到dest的拷贝操作
                 TrLogger.e("DirectoryInput isCurrentIncremental:${isCurrentIncremental} inputDirectory:${directoryInput.file.absolutePath},dest:${dest.absolutePath}")
 
-                if(isCurrentIncremental == true){ //增量编译,仅遍历发生变化的文件列表
+                if (isCurrentIncremental == true) { //增量编译,仅遍历发生变化的文件列表
                     var srcDirPath = directoryInput.file.absolutePath
                     var desDirPath = dest.absolutePath
                     directoryInput.changedFiles.forEach { inputFile, status ->
@@ -105,26 +106,27 @@ abstract class BaseTransform : Transform() {
                         val destFilePath = inputFile.absolutePath.replace(srcDirPath, desDirPath)
                         val destFile = File(destFilePath)
 
-                        if(status == Status.NOTCHANGED){ //NOTCHANGED do nothing
+                        if (status == Status.NOTCHANGED) { //NOTCHANGED do nothing
                             //do nothing
-                        }else if(status == Status.REMOVED){ //REMOVED 确保输出文件 被删除
-                            if(destFile.exists()){
+                        } else if (status == Status.REMOVED) { //REMOVED 确保输出文件 被删除
+                            if (destFile.exists()) {
                                 FileUtils.deleteRecursivelyIfExists(destFile)
                             }
-                        }else if(status == Status.ADDED || status == Status.CHANGED){ //针对单个文件进行处理处理
-                            transformSingleFile(inputFile,destFile,srcDirPath)
+                        } else if (status == Status.ADDED || status == Status.CHANGED) { //针对单个文件进行处理处理
+                            transformSingleFile(inputFile, destFile, srcDirPath)
                         }
                     }
-                }else{ //非增量编译,进行全量的Dir扫描
-                    transfromDir(directoryInput.file,dest)
+                } else { //非增量编译,进行全量的Dir扫描
+                    transfromDir(directoryInput.file, dest)
                 }
             }
 
         }
+        afeterTransform(transformInvocation)
     }
 
 
-    fun calculateDestName(jarInput:JarInput):String{
+    fun calculateDestName(jarInput: JarInput): String {
         val destName = jarInput.name.let {
             //jar文件去掉.jar后缀
             if (it.endsWith(".jar")) it.substring(0, it.length - 4) else it
@@ -135,34 +137,28 @@ abstract class BaseTransform : Transform() {
         return finalDestName
     }
 
-    fun transformJar(jarInputFile: File,destFile:File){
-        var dealedJar = walkJar(jarInputFile) {
-            doScanClass(it)
-        }
+    fun transformJar(jarInputFile: File, destFile: File) {
+        walkJar(jarInputFile, destFile)
         //通用操作,将jar文件 从输入copy到输出目的地
-        FileUtils.copyFile(dealedJar, destFile)
+        FileUtils.copyFile(jarInputFile, destFile)
     }
 
-    fun transfromDir(dirInputFile:File,dirDestFile:File){
-        walkDiretory(dirInputFile) {
-            doScanClass(it)
-        }
+    fun transfromDir(dirInputFile: File, dirDestFile: File) {
+        walkDiretory(dirInputFile, dirDestFile)
         FileUtils.copyDirectory(dirInputFile, dirDestFile)
     }
 
-    fun transformSingleFile(dirInputFile:File,dirDestFile:File,srcDirectorPath:String){
-        dealWithSingleFile(dirInputFile,dirDestFile,srcDirectorPath){
-            doScanClass(it)
-        }
+    fun transformSingleFile(dirInputFile: File, dirDestFile: File, srcDirectoryPath: String) {
+        dealWithSingleFile(dirInputFile, dirDestFile, srcDirectoryPath)
         FileUtils.copyFile(dirInputFile, dirDestFile)
     }
 
 
-    fun walkJar(inputJar: File, scanClass: ScanClassAction): File {
+    fun walkJar(inputJar: File, destJar: File) {
         var srcJar = JarFile(inputJar)
 
         //临时输出文件
-        var outputJar = File(inputJar.parentFile.absolutePath + File.separator + "classes_tmp.jar")
+        var outputJar = File(inputJar.parentFile, inputJar.name + ".opt")
         if (outputJar.exists()) outputJar.delete()
         //输出流
         var outputJarStream = JarOutputStream(FileOutputStream(outputJar))
@@ -184,7 +180,7 @@ abstract class BaseTransform : Transform() {
 
                 //目录不需要处理
                 if (shouldScanJar(inputJarEntry)) { //需要扫描
-                    val newClassBytes = scanClass(inputJarStream)
+                    val newClassBytes = doScanClass(inputJar,destJar, inputJarStream)
                     outputJarStream.write(newClassBytes)
                 } else {
                     outputJarStream.write(IOUtils.toByteArray(inputJarStream))
@@ -197,19 +193,29 @@ abstract class BaseTransform : Transform() {
 
         outputJarStream.close()
         srcJar.close()
-        return outputJar
+
+        if (inputJar.exists()) {
+            inputJar.delete()
+        }
+
+        outputJar.renameTo(inputJar)
+
     }
 
 
-    fun dealWithSingleFile(inputFile:File,destFile: File,srcDirectorPath:String, scanClass: ScanClassAction){
+    fun dealWithSingleFile(
+        inputFile: File,
+        destFile: File,
+        srcDirectorPath: String
+    ) {
         val rootPath = srcDirectorPath.let {
             if (!it.endsWith(File.separator)) it + File.separator else it
         }
-        if( inputFile.isFile && inputFile.name.endsWith(".class")){
+        if (inputFile.isFile && inputFile.name.endsWith(".class")) {
             var className = Utils.getClassNameForFile(rootPath, inputFile)
             if (shouldScanDirectoryFile(className)) {
                 var fis = FileInputStream(inputFile)
-                var newClassBytes = scanClass(fis)
+                var newClassBytes = doScanClass(inputFile,destFile, fis)
                 var fos =
                     FileOutputStream(inputFile.parentFile.absolutePath + File.separator + inputFile.name)
                 fos.write(newClassBytes)
@@ -220,20 +226,25 @@ abstract class BaseTransform : Transform() {
     }
 
 
-    fun walkDiretory(directory: File, scanClass: ScanClassAction) {
-        val rootPath = directory.absolutePath.let {
+    fun walkDiretory(inputDirectory: File, outputDirectory: File) {
+        val rootPath = inputDirectory.absolutePath.let {
             if (!it.endsWith(File.separator)) it + File.separator else it
         }
         TrLogger.d("checkDirecory rootPath:${rootPath}")
 
         //遍历文件目录
-        directory.walk().filter {
+        inputDirectory.walk().filter {
             it.isFile && it.name.endsWith(".class")
         }.forEach { file ->
             var className = Utils.getClassNameForFile(rootPath, file)
             if (shouldScanDirectoryFile(className)) {
                 var fis = FileInputStream(file)
-                var newClassBytes = scanClass(fis)
+                //最终的输出文件
+                var outputDestFile = file.absolutePath.replace(
+                    inputDirectory.absolutePath,
+                    outputDirectory.absolutePath
+                )
+                var newClassBytes = doScanClass(file,File(outputDestFile), fis)
                 var fos =
                     FileOutputStream(file.parentFile.absolutePath + File.separator + file.name)
                 fos.write(newClassBytes)
@@ -256,7 +267,7 @@ abstract class BaseTransform : Transform() {
     }
 
     fun shouldScanDirectoryFile(fileName: String): Boolean {
-        var should= !isSystemClass(fileName)
+        var should = !isSystemClass(fileName)
         if (should) {
             TrLogger.d("shouldScan  true ---  DirectoryFile:${fileName}")
         }
@@ -270,7 +281,13 @@ abstract class BaseTransform : Transform() {
     }
 
 
-    abstract fun doScanClass(inputStream: InputStream): ByteArray
-}
+    abstract fun doScanClass(sourceFile:File,destFile: File, inputStream: InputStream): ByteArray
 
-typealias ScanClassAction = (InputStream) -> ByteArray
+    open fun beforeTransform(transformInvocation: TransformInvocation?) {
+
+    }
+
+    open fun afeterTransform(transformInvocation: TransformInvocation?) {
+
+    }
+}

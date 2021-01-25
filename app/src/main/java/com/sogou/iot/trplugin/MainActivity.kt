@@ -19,14 +19,3 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun main(args:Array<String>){
-
-    System.out.println("feifei---test asm ---- ")
-//    var inputFile = File("/Users/feifei/Desktop/TM/Demo/TrPlugin/app/build/intermediates/transforms/Scan/debug/33/com/sosou/iot/trplugin/ComponentManager.class")
-//    var outputFile = File("/Users/feifei/Desktop/TM/Demo/TrPlugin/app/build/intermediates/transforms/inject/debug/33/com/sosou/iot/trplugin/ComponentManager.class")
-//    TestAsm().scanClass(inputFile,outputFile)
-
-    Thread.sleep(10000)
-    System.out.println("feifei---test asm ----2222 ")
-
-}

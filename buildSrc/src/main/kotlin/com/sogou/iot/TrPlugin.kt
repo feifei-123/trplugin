@@ -3,7 +3,6 @@ package com.sogou.iot
 import com.android.build.gradle.AppExtension
 import com.android.build.gradle.AppPlugin
 import com.sogou.iot.transform.cost.CostTransform
-import com.sogou.iot.transform.inject.InjectTransform
 import com.sogou.iot.transform.inject.ScanTransform
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -34,7 +33,6 @@ class TrPlugin : Plugin<Project> {
             project.extensions.getByType(AppExtension::class.java)?.apply {
                 registerTransform(CostTransform())
                 registerTransform(ScanTransform()) //扫描,收集类信息
-                registerTransform(InjectTransform())//处理手机到的类信息
             }
 
         }
