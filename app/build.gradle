@@ -1,3 +1,5 @@
+import com.sogou.iot.TrLogger
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
@@ -40,7 +42,9 @@ dependencies {
 }
 
 componentExt{
-    matchInterfaceType  "com.sogou.iot.trplugin.IComponent"
-    matchInjectManagerType  "com.sogou.iot.trplugin.ComponentManager"
-    matchInjectManagerInjectMethod ="initComponet"
+    matchInterfaceType =  "com.sogou.iot.trplugin.IComponent"
+    matchInjectManagerType  = "com.sogou.iot.trplugin.ComponentManager"
+    matchInjectManagerInjectMethod = "initComponet"
+    openLog = true
+    logLevel = TrLogger.LogLevelDebug
 }

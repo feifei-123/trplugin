@@ -11,16 +11,7 @@ import java.io.File
  */
 
 
-open class ComponentExtension {
-    //待搜集的接口类
-    var matchInterfaceType: String = ""
 
-    //Container容器类
-    var matchInjectManagerType: String = ""
-
-    //容器类的
-    var matchInjectManagerInjectMethod: String = ""
-}
 
 object PluginHolder {
     const val componentExt = "componentExt"
@@ -28,6 +19,12 @@ object PluginHolder {
 
     fun setProject(project: Project) {
         this.project = project
+
+        this.project?.afterEvaluate {
+            TrLogger.d("getLogOpened():${getLogOpened()},getLogLevel():${getLogLevel()}")
+            TrLogger.logLevel = getLogLevel()
+            TrLogger.openLog = getLogOpened()
+        }
     }
 
     fun getScanInterfaceType(): String? {
@@ -51,6 +48,13 @@ object PluginHolder {
         return (project?.extensions?.getByName(componentExt) as ComponentExtension).matchInjectManagerInjectMethod
     }
 
+    fun getLogOpened():Boolean{
+        return (project?.extensions?.getByName(componentExt) as ComponentExtension).openLog
+    }
+
+    fun getLogLevel():Int{
+        return (project?.extensions?.getByName(componentExt) as ComponentExtension).logLevel
+    }
     var classsNameCollection = mutableSetOf<String>()
     var injectMangetTargetFile: File? = null
     var injectManagetSourceFile:File? = null
